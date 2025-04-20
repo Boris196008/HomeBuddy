@@ -57,6 +57,39 @@ def index():
 # Main chat route
 @app.route('/ask', methods=['POST'])
 @limiter.limit("3 per minute")
+@app.route('/analyze-image', methods=['POST'])
+@limiter.limit("3 per minute")
+def analyze_image():
+    session_id = get_session_id()
+    if not session_id.startswith("pro_"):
+        return jsonify({"error": "Access restricted to paid users only."}), 403
+
+    image_file = request.files.get("image")
+    if not image_file:
+        return jsonify({"error": "Image file is missing."}), 400
+
+    image_bytes = image_file.read()
+    image_b64 = base64.b64encode(image_bytes).decode()
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You're a home assistant. Help suggest what to cook based on the contents of a fridge in the photo."},
+                {"role": "user", "content": [
+                    {"type": "text", "text": "What can I cook using what's visible in the photo?"},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_b64}"
+                    }}
+                ]}
+            ],
+            max_tokens=300
+        )
+        result = response.choices[0].message.content
+        return jsonify({"recipe": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def ask():
     try:
         data = request.get_json()

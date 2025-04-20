@@ -14,7 +14,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 app = Flask(__name__)
 
 # Разрешаем запросы только с твоего фронта
-CORS(app, origins=["https://lazy-gpt-api.onrender.com"])
+CORS(app, origins=["https://lazy-gpt.webflow.io"])
 
 # Ограничение по session_id из cookie
 def get_session_id():

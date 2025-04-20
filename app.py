@@ -70,7 +70,7 @@ def handle_request(data):
     user_input = data.get("message") or ""
     is_webflow = data.get("from") == "webflow"
     language = data.get("lang", "en")
-    allowed = data.get("allowed", [])  # список допустимых follow-up (необязательно)
+    allowed = data.get("allowed", [])
 
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
@@ -92,13 +92,15 @@ def handle_request(data):
         )
         answer = response.choices[0].message.content
 
-        # генерация follow-up кнопок
+        # follow-up prompt
         if allowed:
             allowed_str = ", ".join(allowed)
             followup_prompt = (
-                f"Suggest 3 follow-up actions in JSON format. Each must match one of the following:\n"
-                f"{allowed_str}.\nLanguage: {language.upper()}.\n"
-                "Format: [{\"label\": \"...\", \"action\": \"...\"}]\nNo links, no repetition."
+                f"You are HomeBuddy assistant. Based on the answer below, suggest 3 relevant follow-up actions.\n"
+                f"Only use actions from this list: {allowed_str}. Respond in {language.upper()}.\n"
+                "If nothing fits — return an empty list.\n\n"
+                "Format: [{\"label\": \"...\", \"action\": \"...\"}]\n"
+                "Avoid links. Keep it short and practical."
             )
         else:
             followup_prompt = (
@@ -126,40 +128,6 @@ def handle_request(data):
             suggestions = []
 
         return jsonify({"response": answer, "suggestions": suggestions})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# 🔍 NEW: Image analysis endpoint
-@app.route('/analyze-image', methods=['POST'])
-@limiter.limit("3 per minute")
-def analyze_image():
-    session_id = get_session_id()
-    if not session_id.startswith("pro_"):
-        return jsonify({"error": "Access restricted to paid users only."}), 403
-
-    image_file = request.files.get("image")
-    if not image_file:
-        return jsonify({"error": "Image file is missing."}), 400
-
-    image_bytes = image_file.read()
-    image_b64 = base64.b64encode(image_bytes).decode()
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You're a home assistant. Help suggest what to cook based on the contents of a fridge in the photo."},
-                {"role": "user", "content": [
-                    {"type": "text", "text": "What can I cook using what's visible in the photo?"},
-                    {"type": "image_url", "image_url": {
-                        "url": f"data:image/jpeg;base64,{image_b64}"
-                    }}
-                ]}
-            ],
-            max_tokens=300
-        )
-        result = response.choices[0].message.content
-        return jsonify({"recipe": result})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

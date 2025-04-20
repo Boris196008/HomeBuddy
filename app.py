@@ -96,11 +96,14 @@ def handle_request(data):
         if allowed:
             allowed_str = ", ".join(allowed)
             followup_prompt = (
-                f"You are HomeBuddy assistant. Based on the answer below, suggest 3 relevant follow-up actions.\n"
-                f"Only use actions from this list: {allowed_str}. Respond in {language.upper()}.\n"
-                "If nothing fits — return an empty list.\n\n"
-                "Format: [{\"label\": \"...\", \"action\": \"...\"}]\n"
-                "Avoid links. Keep it short and practical."
+                f"You are HomeBuddy assistant. The user just received the following answer.\n"
+                f"Suggest up to 3 relevant follow-up questions **only if they clearly relate** to the answer.\n"
+                f"You may only choose from this list: {allowed_str}.\n\n"
+                f"The categories are for internal validation — do not copy them blindly. "
+                f"Respond in {language.upper()}.\n\n"
+                "Return JSON array like this:\n"
+                "[{\"label\": \"...\", \"action\": \"...\"}]\n\n"
+                "If nothing matches — return an empty list []. Avoid links. Keep it practical."
             )
         else:
             followup_prompt = (

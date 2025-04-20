@@ -68,9 +68,7 @@ def ask():
 # Chat handler logic
 def handle_request(data):
     user_input = data.get("message") or ""
-    is_webflow = data.get("from") == "webflow"
     language = data.get("lang", "en")
-    allowed = data.get("allowed", [])
 
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
@@ -92,25 +90,15 @@ def handle_request(data):
         )
         answer = response.choices[0].message.content
 
-        # follow-up prompt
-        if allowed:
-            allowed_str = ", ".join(allowed)
-            followup_prompt = (
-                f"You are HomeBuddy assistant. The user just received the following answer.\n"
-                f"Suggest up to 3 relevant follow-up questions **only if they clearly relate** to the answer.\n"
-                f"You may only choose from this list: {allowed_str}.\n\n"
-                f"The categories are for internal validation — do not copy them blindly. "
-                f"Respond in {language.upper()}.\n\n"
-                "Return JSON array like this:\n"
-                "[{\"label\": \"...\", \"action\": \"...\"}]\n\n"
-                "If nothing matches — return an empty list []. Avoid links. Keep it practical."
-            )
-        else:
-            followup_prompt = (
-                f"Based on the following answer, suggest 3 smart follow-up actions in JSON format.\n"
-                f"Language: {language.upper()}.\n"
-                "Format: [{\"label\": \"...\", \"action\": \"...\"}]\nNo links, no repetition."
-            )
+        # follow-up prompt (мягкий, без ограничений)
+        followup_prompt = (
+            f"You are HomeBuddy assistant. Based on the answer below, suggest 3 practical follow-up actions "
+            f"that a homemaker might ask next.\n"
+            f"Language: {language.upper()}\n"
+            f"Respond with JSON only, format:\n"
+            f"[{{\"label\": \"...\", \"action\": \"...\"}}]\n"
+            f"No links, no explanation, no repetition of the answer. Keep it useful and short."
+        )
 
         followup_response = client.chat.completions.create(
             model="gpt-4o",

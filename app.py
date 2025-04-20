@@ -8,42 +8,53 @@ from flask_limiter import Limiter
 import json
 import base64
 
+# Enable live logs
 sys.stdout.reconfigure(line_buffering=True)
+
+# Load environment variables
 load_dotenv()
 
+# OpenAI client setup
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Flask app setup
 app = Flask(__name__)
 CORS(app, origins=["https://lazy-gpt.webflow.io"])
 
+# Get session ID from cookies
 def get_session_id():
     try:
         return request.cookies.get("session_id") or "no-session"
     except:
         return "no-session"
 
+# Request limiter per session
 limiter = Limiter(key_func=get_session_id, app=app)
 
+# Block bots without proper js_token
 @app.before_request
 def reject_invalid_token():
-    if request.path == "/ask" and request.method == "POST":
+    if request.path in ["/ask", "/analyze-image"] and request.method == "POST":
         try:
-            data = request.get_json()
+            data = request.get_json() if request.is_json else {}
             if data.get("js_token") != "genuine-human":
                 print("🚩 Bot without js_token — rejected", flush=True)
                 return jsonify({"error": "Bot detected — invalid token"}), 403
         except:
             return jsonify({"error": "Malformed request"}), 403
 
+# Request logging
 @app.after_request
 def log_request(response):
     print(f"📡 IP: {request.remote_addr}, UA: {request.user_agent}, Session: {get_session_id()}, Status: {response.status_code}", flush=True)
     return response
 
+# Root route
 @app.route('/')
 def index():
     return "HomeBuddy API is running. Use POST /ask."
 
+# Main chat route
 @app.route('/ask', methods=['POST'])
 @limiter.limit("3 per minute")
 def ask():
@@ -54,10 +65,10 @@ def ask():
     except:
         return jsonify({"error": "Invalid JSON"}), 400
 
+# Chat handler logic
 def handle_request(data):
     user_input = data.get("message") or ""
     language = data.get("lang", "en")
-    allowed = data.get("allowed", [])  # получено с фронта, e.g. ["\"Recipes\"", "\"Cleaning\""]
 
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
@@ -78,21 +89,14 @@ def handle_request(data):
         )
         answer = response.choices[0].message.content
 
-        if allowed:
-            allowed_str = ", ".join(allowed)
-            followup_prompt = (
-                f"You are HomeBuddy assistant. Based on the answer below, suggest 3 follow-up actions "
-                f"only from the following list: {allowed_str}. Respond in {language.upper()}.\n"
-                "If none apply, return an empty list. Format: [{\"label\": \"...\", \"action\": \"...\"}]\n"
-                "No links. No explanation. JSON only."
-            )
-        else:
-            followup_prompt = (
-                f"Based on the answer below, suggest 3 helpful follow-up actions. "
-                f"Language: {language.upper()}.\n"
-                "Format: [{\"label\": \"...\", \"action\": \"...\"}]\n"
-                "No links. No repetition."
-            )
+        followup_prompt = (
+            f"You are HomeBuddy assistant. Based on the answer below, suggest 3 practical follow-up actions "
+            f"that a homemaker might ask next.\n"
+            f"Language: {language.upper()}\n"
+            f"Respond with JSON only, format:\n"
+            f"[{{\"label\": \"...\", \"action\": \"...\"}}]\n"
+            f"No links, no explanation, no repetition of the answer. Keep it useful and short."
+        )
 
         followup_response = client.chat.completions.create(
             model="gpt-4o",
@@ -116,6 +120,7 @@ def handle_request(data):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Analyze image route (Pro only)
 @app.route('/analyze-image', methods=['POST'])
 @limiter.limit("3 per minute")
 def analyze_image():
@@ -147,8 +152,9 @@ def analyze_image():
         result = response.choices[0].message.content
         return jsonify({"recipe": result})
     except Exception as e:
-        return jsonify({"error": f"Error code: 400 - {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
+# Run app
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

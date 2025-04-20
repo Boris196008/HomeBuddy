@@ -12,11 +12,8 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 app = Flask(__name__)
-
-# Разрешаем запросы только с твоего фронта
 CORS(app, origins=["https://lazy-gpt.webflow.io"])
 
-# Ограничение по session_id из cookie
 def get_session_id():
     try:
         return request.cookies.get("session_id") or "no-session"
@@ -66,9 +63,6 @@ def handle_request(data):
         "You are HomeBuddy — a friendly, minimal AI assistant for home tasks. "
         "Answer simply, clearly and in helpful tone. Avoid questions. No explanations. "
         "Just deliver a final result that’s practical and easy to understand for a homemaker."
-    ) if is_webflow else (
-        "Ты — гениальный помощник. Пользователь пишет всего одну фразу — ты сразу выдаёшь готовый, завершённый, красиво оформленный ответ. "
-        "⚠️ Никогда не задавай уточняющих вопросов. Ответ должен быть кратким, лаконичным и финальным."
     )
 
     try:
@@ -80,7 +74,33 @@ def handle_request(data):
             ]
         )
         answer = response.choices[0].message.content
-        return jsonify({"response": answer})
+
+        followup_prompt = (
+            "Based on the following answer, suggest 3 smart follow-up actions in JSON format:\n\n"
+            "Example output:\n"
+            "[{\"label\": \"More recipes\", \"action\": \"Show me more recipes\"}]\n\n"
+            "Do not use links, do not repeat the answer. Keep it practical and relevant."
+        )
+
+        followup_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": followup_prompt},
+                {"role": "user", "content": answer}
+            ]
+        )
+
+        raw = followup_response.choices[0].message.content.strip()
+        try:
+            if "```" in raw:
+                raw = raw.split("```")[1].strip()
+            if raw.startswith("json"):
+                raw = raw[4:].strip()
+            suggestions = json.loads(raw)
+        except:
+            suggestions = []
+
+        return jsonify({"response": answer, "suggestions": suggestions})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

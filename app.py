@@ -69,6 +69,8 @@ def ask():
 def handle_request(data):
     user_input = data.get("message") or ""
     is_webflow = data.get("from") == "webflow"
+    language = data.get("lang", "en")
+    allowed = data.get("allowed", [])  # список допустимых follow-up (необязательно)
 
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
@@ -80,6 +82,7 @@ def handle_request(data):
     )
 
     try:
+        # основной ответ
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -89,12 +92,20 @@ def handle_request(data):
         )
         answer = response.choices[0].message.content
 
-        followup_prompt = (
-            "Based on the following answer, suggest 3 smart follow-up actions in JSON format:\n\n"
-            "Example output:\n"
-            "[{\"label\": \"More recipes\", \"action\": \"Show me more recipes\"}]\n\n"
-            "Do not use links, do not repeat the answer. Keep it practical and relevant."
-        )
+        # генерация follow-up кнопок
+        if allowed:
+            allowed_str = ", ".join(allowed)
+            followup_prompt = (
+                f"Suggest 3 follow-up actions in JSON format. Each must match one of the following:\n"
+                f"{allowed_str}.\nLanguage: {language.upper()}.\n"
+                "Format: [{\"label\": \"...\", \"action\": \"...\"}]\nNo links, no repetition."
+            )
+        else:
+            followup_prompt = (
+                f"Based on the following answer, suggest 3 smart follow-up actions in JSON format.\n"
+                f"Language: {language.upper()}.\n"
+                "Format: [{\"label\": \"...\", \"action\": \"...\"}]\nNo links, no repetition."
+            )
 
         followup_response = client.chat.completions.create(
             model="gpt-4o",

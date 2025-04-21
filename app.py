@@ -12,7 +12,6 @@ import base64
 SESSION_USAGE = {}
 FREE_LIMIT = 3
 
-
 # Enable live logs
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -72,7 +71,6 @@ def ask():
         data["from"] = "webflow"
         data["pro"] = is_pro_user(session_id)
 
-        # 👉 логируем текущее состояние
         print(f"🧭 session_id = {session_id}, count = {SESSION_USAGE.get(session_id)}, pro = {data['pro']}", flush=True)
 
         if not data["pro"]:
@@ -84,6 +82,14 @@ def ask():
     except:
         return jsonify({"error": "Invalid JSON"}), 400
 
+# Chat handler logic
+def handle_request(data):
+    user_input = data.get("message") or ""
+    language = data.get("lang", "en")
+    is_pro = data.get("pro", False)
+
+    if not user_input:
+        return jsonify({"error": "No message provided"}), 400
 
     system_prompt = (
         "You are HomeBuddy — a friendly, minimal AI assistant for home tasks. "
@@ -180,7 +186,6 @@ def reset_session_usage():
     else:
         print(f"ℹ️ Nothing to reset for {session_id}", flush=True)
     return jsonify({"message": "Session usage reset", "session_id": session_id})
-
 
 # Run app
 if __name__ == '__main__':

@@ -72,6 +72,9 @@ def ask():
         data["from"] = "webflow"
         data["pro"] = is_pro_user(session_id)
 
+        # 👉 логируем текущее состояние
+        print(f"🧭 session_id = {session_id}, count = {SESSION_USAGE.get(session_id)}, pro = {data['pro']}", flush=True)
+
         if not data["pro"]:
             SESSION_USAGE[session_id] = SESSION_USAGE.get(session_id, 0) + 1
             if SESSION_USAGE[session_id] > FREE_LIMIT:
@@ -80,14 +83,7 @@ def ask():
         return handle_request(data)
     except:
         return jsonify({"error": "Invalid JSON"}), 400
-# Chat handler logic
-def handle_request(data):
-    user_input = data.get("message") or ""
-    language = data.get("lang", "en")
-    is_pro = data.get("pro", False)
 
-    if not user_input:
-        return jsonify({"error": "No message provided"}), 400
 
     system_prompt = (
         "You are HomeBuddy — a friendly, minimal AI assistant for home tasks. "

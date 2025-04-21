@@ -28,6 +28,9 @@ def get_session_id():
     except:
         return "no-session"
 
+def is_pro_user(session_id):
+    return session_id.startswith("pro_")
+
 # Request limiter per session
 limiter = Limiter(key_func=get_session_id, app=app)
 
@@ -60,7 +63,9 @@ def index():
 def ask():
     try:
         data = request.get_json()
+        session_id = get_session_id()
         data["from"] = "webflow"
+        data["pro"] = is_pro_user(session_id)
         return handle_request(data)
     except:
         return jsonify({"error": "Invalid JSON"}), 400
@@ -69,6 +74,7 @@ def ask():
 def handle_request(data):
     user_input = data.get("message") or ""
     language = data.get("lang", "en")
+    is_pro = data.get("pro", False)
 
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
@@ -116,21 +122,26 @@ def handle_request(data):
         except:
             suggestions = []
 
-        return jsonify({"response": answer, "suggestions": suggestions})
+        return jsonify({
+            "response": answer,
+            "suggestions": suggestions,
+            "pro": is_pro
+        })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "pro": is_pro}), 500
 
 # Analyze image route (Pro only)
 @app.route('/analyze-image', methods=['POST'])
 @limiter.limit("3 per minute")
 def analyze_image():
     session_id = get_session_id()
-    if not session_id.startswith("pro_"):
-        return jsonify({"error": "Access restricted to paid users only."}), 403
+    is_pro = is_pro_user(session_id)
+    if not is_pro:
+        return jsonify({"error": "Access restricted to paid users only.", "pro": False}), 403
 
     image_file = request.files.get("image")
     if not image_file:
-        return jsonify({"error": "Image file is missing."}), 400
+        return jsonify({"error": "Image file is missing.", "pro": True}), 400
 
     image_bytes = image_file.read()
     image_b64 = base64.b64encode(image_bytes).decode()
@@ -150,9 +161,9 @@ def analyze_image():
             max_tokens=300
         )
         result = response.choices[0].message.content
-        return jsonify({"recipe": result})
+        return jsonify({"recipe": result, "pro": True})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "pro": True}), 500
 
 # Run app
 if __name__ == '__main__':

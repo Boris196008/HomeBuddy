@@ -70,6 +70,15 @@ def index():
 def ask():
     try:
         data = request.get_json()
+        
+       print("🧪 DEBUG INFO")
+       print("Cookies:", request.cookies)
+       print("session_id:", get_session_id())
+       print("js_token:", data.get("js_token"))
+       print("Headers:", dict(request.headers))
+       print("Body:", data)
+  
+         
         session_id = get_session_id()
         data["from"] = "webflow"
         data["pro"] = is_pro_user(session_id)

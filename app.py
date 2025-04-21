@@ -8,6 +8,10 @@ from flask_limiter import Limiter
 import json
 import base64
 
+# Session usage tracking (reset on server restart)
+SESSION_USAGE = {}
+FREE_LIMIT = 3
+
 # Enable live logs
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -59,17 +63,22 @@ def index():
 
 # Main chat route
 @app.route('/ask', methods=['POST'])
-@limiter.limit("3 per minute")
+@limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "3 per minute")
 def ask():
     try:
         data = request.get_json()
         session_id = get_session_id()
         data["from"] = "webflow"
         data["pro"] = is_pro_user(session_id)
+
+        if not data["pro"]:
+            SESSION_USAGE[session_id] = SESSION_USAGE.get(session_id, 0) + 1
+            if SESSION_USAGE[session_id] > FREE_LIMIT:
+                return jsonify({"error": "Free limit reached", "pro": False}), 403
+
         return handle_request(data)
     except:
         return jsonify({"error": "Invalid JSON"}), 400
-
 # Chat handler logic
 def handle_request(data):
     user_input = data.get("message") or ""
@@ -132,7 +141,7 @@ def handle_request(data):
 
 # Analyze image route (Pro only)
 @app.route('/analyze-image', methods=['POST'])
-@limiter.limit("3 per minute")
+@limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "3 per minute")
 def analyze_image():
     session_id = get_session_id()
     is_pro = is_pro_user(session_id)

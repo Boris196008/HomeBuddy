@@ -71,17 +71,18 @@ def ask():
     try:
         data = request.get_json()
         
-       print("🧪 DEBUG INFO")
-       print("Cookies:", request.cookies)
-       print("session_id:", get_session_id())
-       print("js_token:", data.get("js_token"))
-       print("Headers:", dict(request.headers))
-       print("Body:", data)
-  
-         
+        # 🧪 DEBUG
+        print("🧪 DEBUG INFO")
+        print("Cookies:", request.cookies)
+        print("session_id:", get_session_id())
+        print("js_token:", data.get("js_token"))
+        print("Headers:", dict(request.headers))
+        print("Body:", data)
+
         session_id = get_session_id()
         data["from"] = "webflow"
         data["pro"] = is_pro_user(session_id)
+
 
         print(f"🧭 session_id = {session_id}, count = {SESSION_USAGE.get(session_id)}, pro = {data['pro']}", flush=True)
 

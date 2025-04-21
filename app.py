@@ -24,7 +24,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Flask app setup
 app = Flask(__name__)
-CORS(app, origins=["https://lazy-gpt.webflow.io"])
+CORS(app, origins=["https://homebuddy.onrender.com"])
 
 # Get session ID from cookies
 def get_session_id():

@@ -8,6 +8,11 @@ from flask_limiter import Limiter
 import json
 import base64
 
+# Track number of total requests per session (in-memory)
+SESSION_USAGE = {}
+FREE_LIMIT = 3
+
+
 # Enable live logs
 sys.stdout.reconfigure(line_buffering=True)
 

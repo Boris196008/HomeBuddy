@@ -11,6 +11,13 @@ import base64
 # Session usage tracking (reset on server restart)
 SESSION_USAGE = {}
 FREE_LIMIT = 3
+@app.route("/reset", methods=["POST"])
+def reset_session_usage():
+    session_id = get_session_id()
+    if session_id in SESSION_USAGE:
+        del SESSION_USAGE[session_id]
+        print(f"✅ Reset usage for {session_id}", flush=True)
+    return jsonify({"message": "Session usage reset", "session_id": session_id})
 
 # Enable live logs
 sys.stdout.reconfigure(line_buffering=True)

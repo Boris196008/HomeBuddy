@@ -15,7 +15,11 @@ ALLOWED_REFERER = "https://lazy-gpt.webflow.io"
 
 # ─── Вспомогательные функции ────────────────────
 def get_session_id():
-    return request.cookies.get("session_id", "no-session")
+    return (
+        request.headers.get("X-Session-Id") or
+        request.cookies.get("session_id") or
+        "no-session"
+    )
 
 def is_pro_user(session_id):
     return session_id.startswith("pro_")

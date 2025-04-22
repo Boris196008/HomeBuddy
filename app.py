@@ -89,8 +89,7 @@ def ask():
         return jsonify({"error": str(e)}), 500
 
 # Chat handler logic
-
-    def handle_request(data):
+def handle_request(data):
     user_input = data.get("message") or ""
     language = data.get("lang", "en")
     is_pro = data.get("pro", False)

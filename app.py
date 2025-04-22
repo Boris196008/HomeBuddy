@@ -29,6 +29,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     supports_credentials=True
 )
 def ask():
+    print("📥 Пришёл запрос на /ask", flush=True)
     try:
         data = request.get_json()
         user_input = data.get("message") or ""

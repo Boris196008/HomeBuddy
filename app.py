@@ -25,7 +25,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Flask app setup
 app = Flask(__name__)
-limiter = Limiter(key_func=get_session_id, app=app)
+
 # Глобальный CORS (не обязателен, но пусть будет)
 CORS(app,
      origins=["https://lazy-gpt.webflow.io"],
@@ -74,7 +74,7 @@ def get_session_id():
 def is_pro_user(session_id):
     return session_id.startswith("pro_")
 
-
+limiter = Limiter(key_func=get_session_id, app=app)
 
 # Block bots without proper js_token
 @app.before_request

@@ -28,12 +28,47 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     origins=["https://lazy-gpt.webflow.io"],
     supports_credentials=True
 )
+SESSION_USAGE = {}
+FREE_LIMIT = 3
+
+def get_session_id():
+    try:
+        return request.cookies.get("session_id") or "no-session"
+    except:
+        return "no-session"
+
+def is_pro_user(session_id):
+    return session_id.startswith("pro_")
+
+@app.route("/ask", methods=["POST", "OPTIONS"])
+@cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 def ask():
     print("📥 Пришёл запрос на /ask", flush=True)
+    session_id = get_session_id()
+    is_pro = is_pro_user(session_id)
+
     try:
         data = request.get_json()
-        user_input = data.get("message") or ""
-        language = data.get("lang", "en")
+        print("🔍 session:", session_id, "| pro:", is_pro)
+
+        # 👉 лимит
+        if not is_pro:
+            SESSION_USAGE[session_id] = SESSION_USAGE.get(session_id, 0) + 1
+            if SESSION_USAGE[session_id] > FREE_LIMIT:
+                return jsonify({
+                    "error": "Free limit reached",
+                    "pro": False
+                }), 403
+
+        # 💬 временный ответ
+        return jsonify({
+            "response": f"Принято. Это ваш {SESSION_USAGE.get(session_id, 1)} запрос.",
+            "pro": is_pro
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
         if not user_input:
             return jsonify({"error": "No message provided"}), 400

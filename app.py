@@ -7,6 +7,8 @@ import sys
 from flask_limiter import Limiter
 import json
 import base64
+from flask_cors import cross_origin
+
 
 # Track number of total requests per session (in-memory)
 SESSION_USAGE = {}
@@ -29,14 +31,37 @@ CORS(app,
      supports_credentials=True,
      allow_headers=["Content-Type"])
 
-@app.route("/ask", methods=["POST", "OPTIONS"])
+
+@app.route('/ask', methods=['POST', 'OPTIONS'])
 @cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
+@limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "3 per minute")
 def ask():
-    session_id = request.cookies.get("session_id", "no-session")
-    print("📡 Получен session_id:", session_id)
-    return jsonify({
-        "message": f"Session ID: {session_id}"
-    })
+    try:
+        data = request.get_json()
+
+        # 🧪 DEBUG
+        print("🧪 DEBUG INFO")
+        print("Cookies:", request.cookies)
+        print("session_id:", get_session_id())
+        print("js_token:", data.get("js_token"))
+        print("Headers:", dict(request.headers))
+        print("Body:", data)
+
+        session_id = get_session_id()
+        data["from"] = "webflow"
+        data["pro"] = is_pro_user(session_id)
+
+        print(f"🧭 session_id = {session_id}, count = {SESSION_USAGE.get(session_id)}, pro = {data['pro']}", flush=True)
+
+        if not data["pro"]:
+            SESSION_USAGE[session_id] = SESSION_USAGE.get(session_id, 0) + 1
+            if SESSION_USAGE[session_id] > FREE_LIMIT:
+                return jsonify({"error": "Free limit reached", "pro": False}), 403
+
+        return handle_request(data)
+    except:
+        return jsonify({"error": "Invalid JSON"}), 400
+
 
 # Get session ID from cookies
 def get_session_id():
@@ -74,36 +99,6 @@ def log_request(response):
 def index():
     return "HomeBuddy API is running. Use POST /ask."
 
-# Main chat route
-@app.route('/ask', methods=['POST'])
-@limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "3 per minute")
-def ask():
-    try:
-        data = request.get_json()
-        
-        # 🧪 DEBUG
-        print("🧪 DEBUG INFO")
-        print("Cookies:", request.cookies)
-        print("session_id:", get_session_id())
-        print("js_token:", data.get("js_token"))
-        print("Headers:", dict(request.headers))
-        print("Body:", data)
-
-        session_id = get_session_id()
-        data["from"] = "webflow"
-        data["pro"] = is_pro_user(session_id)
-
-
-        print(f"🧭 session_id = {session_id}, count = {SESSION_USAGE.get(session_id)}, pro = {data['pro']}", flush=True)
-
-        if not data["pro"]:
-            SESSION_USAGE[session_id] = SESSION_USAGE.get(session_id, 0) + 1
-            if SESSION_USAGE[session_id] > FREE_LIMIT:
-                return jsonify({"error": "Free limit reached", "pro": False}), 403
-
-        return handle_request(data)
-    except:
-        return jsonify({"error": "Invalid JSON"}), 400
 
 # Chat handler logic
 def handle_request(data):

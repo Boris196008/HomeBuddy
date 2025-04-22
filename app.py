@@ -17,7 +17,7 @@ def get_session_id():
     try:
         return request.cookies.get("session_id") or "no-session"
     except:
-        return "no-session"
+        return jsonify({"session_id": "no-session"})
 
 
 CORS(app,

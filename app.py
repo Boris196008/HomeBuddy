@@ -40,13 +40,26 @@ app = Flask(__name__)
 limiter = Limiter(key_func=get_session_id, app=app)
 # Глобальный CORS (не обязателен, но пусть будет)
 CORS(app,
-     origins=["https://lazy-gpt.webflow.io"],
+     origins=[
+         "https://lazy-gpt.webflow.io",
+         "http://localhost:8889",        # если ты вручную
+         "http://127.0.0.1:5500"         # если Live Server
+     ],
      supports_credentials=True,
      allow_headers=["Content-Type"])
 
 
 @app.route('/ask', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
+@cross_origin(
+    origins=[
+        "https://lazy-gpt.webflow.io",
+        "http://localhost:8889",
+        "http://127.0.0.1:5500"
+    ],
+    supports_credentials=True
+)
+
+
 @limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "3 per minute")
 def ask():
     try:

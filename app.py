@@ -23,10 +23,20 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Flask app setup
 app = Flask(__name__)
+# Глобальный CORS (не обязателен, но пусть будет)
 CORS(app,
-     origins=["https://homebuddy.onrender.com", "https://lazy-gpt.webflow.io"],
+     origins=["https://lazy-gpt.webflow.io"],
      supports_credentials=True,
      allow_headers=["Content-Type"])
+
+@app.route("/ask", methods=["POST", "OPTIONS"])
+@cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
+def ask():
+    session_id = request.cookies.get("session_id", "no-session")
+    print("📡 Получен session_id:", session_id)
+    return jsonify({
+        "message": f"Session ID: {session_id}"
+    })
 
 # Get session ID from cookies
 def get_session_id():

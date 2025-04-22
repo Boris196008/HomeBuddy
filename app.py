@@ -76,14 +76,14 @@ def ask():
                     "session_id": session_id
                 }), 403
 
-      #  return jsonify({
-     #     "response": f"✅ Принято. Это ваш {SESSION_USAGE.get(session_id, 1)} запрос.",
-       #     "pro": is_pro,
-        #    "session_id": session_id
+        return jsonify({
+         "response": f"✅ Принято. Это ваш {SESSION_USAGE.get(session_id, 1)} запрос.",
+           "pro": is_pro,
+           "session_id": session_id
         
-       # })
+        })
 
-                return handle_request(data)
+         #       return handle_request(data)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -7,11 +7,6 @@ from flask_limiter import Limiter
 app = Flask(__name__)
 CORS(app, origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 
-limiter = Limiter(
-    key_func=get_session_id,
-    app=app
-)
-
 
 SESSION_USAGE = {}
 FREE_LIMIT = 3
@@ -25,6 +20,10 @@ def get_session_id():
 def is_pro_user(session_id):
     return session_id.startswith("pro_")
 
+limiter = Limiter(
+    key_func=get_session_id,
+    app=app
+)
 
 @app.before_request
 def reject_invalid_token():

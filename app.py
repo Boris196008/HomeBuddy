@@ -16,6 +16,20 @@ def get_session_id():
 def is_pro_user(session_id):
     return session_id.startswith("pro_")
 
+
+@app.before_request
+def reject_invalid_token():
+    if request.path in ["/ask", "/analyze-image"] and request.method == "POST":
+        try:
+            data = request.get_json() if request.is_json else {}
+            if data.get("js_token") != "genuine-human":
+                print("🚩 Bot без js_token — отклонён", flush=True)
+                return jsonify({"error": "Bot detected — invalid token"}), 403
+        except:
+            return jsonify({"error": "Malformed request"}), 403
+
+
+
 @app.route("/ask", methods=["POST", "OPTIONS"])
 @cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 def ask():

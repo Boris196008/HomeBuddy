@@ -83,7 +83,7 @@ def ask():
         
        # })
 
-                 return handle_request(data)
+                return handle_request(data)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

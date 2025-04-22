@@ -76,14 +76,76 @@ def ask():
                     "session_id": session_id
                 }), 403
 
-        return jsonify({
-            "response": f"✅ Принято. Это ваш {SESSION_USAGE.get(session_id, 1)} запрос.",
-            "pro": is_pro,
-            "session_id": session_id
+      #  return jsonify({
+     #     "response": f"✅ Принято. Это ваш {SESSION_USAGE.get(session_id, 1)} запрос.",
+       #     "pro": is_pro,
+        #    "session_id": session_id
+        return handle_request(data)
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# Chat handler logic
+
+    def handle_request(data):
+    user_input = data.get("message") or ""
+    language = data.get("lang", "en")
+    is_pro = data.get("pro", False)
+
+    if not user_input:
+        return jsonify({"error": "No message provided"}), 400
+
+    system_prompt = (
+        "You are HomeBuddy — a friendly, minimal AI assistant for home tasks. "
+        "Answer simply, clearly and in helpful tone. Avoid questions. No explanations. "
+        "Just deliver a final result that’s practical and easy to understand for a homemaker."
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ]
+        )
+        answer = response.choices[0].message.content
+
+        followup_prompt = (
+            f"You are HomeBuddy assistant. Based on the answer below, suggest 3 practical follow-up actions "
+            f"that a homemaker might ask next.\n"
+            f"Language: {language.upper()}\n"
+            f"Respond with JSON only, format:\n"
+            f"[{{\"label\": \"...\", \"action\": \"...\"}}]\n"
+            f"No links, no explanation, no repetition of the answer. Keep it useful and short."
+        )
+
+        followup_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": followup_prompt},
+                {"role": "user", "content": answer}
+            ]
+        )
+
+        raw = followup_response.choices[0].message.content.strip()
+        try:
+            if "```" in raw:
+                raw = raw.split("```")[1].strip()
+            if raw.startswith("json"):
+                raw = raw[4:].strip()
+            suggestions = json.loads(raw)
+        except:
+            suggestions = []
+
+        return jsonify({
+            "response": answer,
+            "suggestions": suggestions,
+            "pro": is_pro
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "pro": is_pro}), 500
 
 # ─── Сброс лимита ───────────────────────────────
 @app.route("/reset", methods=["POST"])

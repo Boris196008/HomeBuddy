@@ -23,9 +23,21 @@ load_dotenv()
 # OpenAI client setup
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Get session ID from cookies
+def get_session_id():
+    try:
+        return request.cookies.get("session_id") or "no-session"
+    except:
+        return "no-session"
+
+def is_pro_user(session_id):
+    return session_id.startswith("pro_")
+
+
+
 # Flask app setup
 app = Flask(__name__)
-
+limiter = Limiter(key_func=get_session_id, app=app)
 # Глобальный CORS (не обязателен, но пусть будет)
 CORS(app,
      origins=["https://lazy-gpt.webflow.io"],
@@ -64,17 +76,9 @@ def ask():
         return jsonify({"error": "Invalid JSON"}), 400
 
 
-# Get session ID from cookies
-def get_session_id():
-    try:
-        return request.cookies.get("session_id") or "no-session"
-    except:
-        return "no-session"
 
-def is_pro_user(session_id):
-    return session_id.startswith("pro_")
 
-limiter = Limiter(key_func=get_session_id, app=app)
+
 
 # Block bots without proper js_token
 @app.before_request

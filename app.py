@@ -1,8 +1,17 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
+from flask_limiter import Limiter
+
+
 
 app = Flask(__name__)
 CORS(app, origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
+
+limiter = Limiter(
+    key_func=get_session_id,
+    app=app
+)
+
 
 SESSION_USAGE = {}
 FREE_LIMIT = 3
@@ -32,6 +41,7 @@ def reject_invalid_token():
 
 @app.route("/ask", methods=["POST", "OPTIONS"])
 @cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
+@limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "5 per minute")
 def ask():
     print("📥 Пришёл запрос на /ask")
     session_id = get_session_id()

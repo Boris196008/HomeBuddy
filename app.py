@@ -9,6 +9,13 @@ import json
 load_dotenv()
 app = Flask(__name__)
 
+def get_session_id():
+    try:
+        return request.cookies.get("session_id") or "no-session"
+    except:
+        return "no-session"
+
+
 CORS(app,
      origins=["https://lazy-gpt.webflow.io"],
      supports_credentials=True,

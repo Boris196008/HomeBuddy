@@ -44,6 +44,33 @@ def reject_invalid_token():
 
 
 @app.route("/ask", methods=["POST", "OPTIONS"])
+@app.route("/reset", methods=["POST"])
+def reset_session_usage():
+    session_id = get_session_id()
+    if session_id in SESSION_USAGE:
+        del SESSION_USAGE[session_id]
+        print(f"✅ Сброшен лимит для: {session_id}")
+    else:
+        print(f"ℹ️ Нет лимита для сброса: {session_id}")
+    return jsonify({"message": "Session usage reset", "session_id": session_id})
+
+@app.route("/stats", methods=["GET"])
+def stats():
+    total = len(SESSION_USAGE)
+    anon = len([sid for sid in SESSION_USAGE if sid.startswith("anon_")])
+    pro = len([sid for sid in SESSION_USAGE if sid.startswith("pro_")])
+    total_requests = sum(SESSION_USAGE.values())
+    return jsonify({
+        "active_sessions": total,
+        "anon_sessions": anon,
+        "pro_sessions": pro,
+        "total_requests": total_requests
+    })
+
+
+
+
+
 @cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 @limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "5 per minute")
 def ask():

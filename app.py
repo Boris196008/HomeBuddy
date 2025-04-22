@@ -30,12 +30,17 @@ def reject_invalid_token():
     if request.path in ["/ask", "/analyze-image"] and request.method == "POST":
         try:
             data = request.get_json() if request.is_json else {}
+
             if data.get("js_token") != "genuine-human":
                 print("🚩 Bot без js_token — отклонён", flush=True)
                 return jsonify({"error": "Bot detected — invalid token"}), 403
-        except:
-            return jsonify({"error": "Malformed request"}), 403
 
+            if data.get("phone"):  # honeypot поле заполнено
+                print("🚩 Honeypot заполнен — бот!", flush=True)
+                return jsonify({"error": "Bot detected — honeypot filled"}), 403
+
+        except Exception as e:
+            return jsonify({"error": "Malformed request"}), 403
 
 
 @app.route("/ask", methods=["POST", "OPTIONS"])

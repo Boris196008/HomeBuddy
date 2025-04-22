@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import json
 
+
+SESSION_USAGE = {}
+FREE_LIMIT = 3
+
 # === Setup ===
 load_dotenv()
 app = Flask(__name__)
@@ -28,8 +32,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     origins=["https://lazy-gpt.webflow.io"],
     supports_credentials=True
 )
-SESSION_USAGE = {}
-FREE_LIMIT = 3
 
 def get_session_id():
     try:

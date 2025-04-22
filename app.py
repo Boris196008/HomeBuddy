@@ -26,6 +26,12 @@ limiter = Limiter(
 )
 
 @app.before_request
+
+allowed_origin = "https://lazy-gpt.webflow.io"
+referer = request.headers.get("Referer", "")
+if not referer.startswith(allowed_origin):
+    return jsonify({"error": "Invalid referer"}), 403
+
 def reject_invalid_token():
     if request.path in ["/ask", "/analyze-image"] and request.method == "POST":
         try:

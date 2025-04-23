@@ -1,12 +1,17 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 from flask_limiter import Limiter
+from openai import OpenAI
+import os
+import json
 
 # ─── Инициализация ──────────────────────────────
 app = Flask(__name__)
 CORS(app, origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 limiter = Limiter(key_func=lambda: get_session_id(), app=app)
+
+# OpenAI client (укажи свой API-ключ через .env или напрямую)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ─── Константы и хранилище ──────────────────────
 SESSION_USAGE = {}
@@ -76,19 +81,13 @@ def ask():
                     "session_id": session_id
                 }), 403
 
-        return jsonify({
-         "response": f"✅ Принято. Это ваш {SESSION_USAGE.get(session_id, 1)} запрос.",
-           "pro": is_pro,
-           "session_id": session_id
-        
-        })
-
-         #       return handle_request(data)
+        data["pro"] = is_pro  # <--- обязательно!
+        return handle_request(data)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Chat handler logic
+# ─── Chat handler logic ─────────────────────────
 def handle_request(data):
     user_input = data.get("message") or ""
     language = data.get("lang", "en")

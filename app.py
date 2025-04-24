@@ -73,7 +73,8 @@ def validate_request():
 
 # ─── Основной маршрут /ask ──────────────────────
 @app.route("/ask", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
+@cross_origin(origins="*", supports_credentials=True)
+#@cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 @limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "5 per minute")
 def ask():
     session_id = get_session_id()

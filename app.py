@@ -40,6 +40,8 @@ def is_pro_user(session_id):
 
 # ─── Защита: js_token + honeypot + referer + UA ─
 @app.before_request
+def log_origin():
+    print("Incoming Origin:", request.headers.get("Origin"))
 def validate_request():
     if request.path not in ["/ask", "/analyze-image"] or request.method != "POST":
         return

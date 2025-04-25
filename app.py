@@ -7,16 +7,7 @@ import json
 
 # ─── Инициализация ──────────────────────────────
 app = Flask(__name__)
-CORS(app, origins="*", supports_credentials=True)
-#CORS(
-#    app,
-
-#origins=[
-#        "https://lazy-gpt.webflow.io",
-#        "https://lazygptcom.wpcomstaging.com"
-#    ],
-#    supports_credentials=True
-#)
+CORS(app, origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 limiter = Limiter(key_func=lambda: get_session_id(), app=app)
 
 # OpenAI client (укажи свой API-ключ через .env или напрямую)

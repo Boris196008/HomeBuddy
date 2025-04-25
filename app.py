@@ -10,7 +10,6 @@ app = Flask(__name__)
 CORS(app, origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 limiter = Limiter(key_func=lambda: get_session_id(), app=app)
 
-# OpenAI client (укажи свой API-ключ через .env или напрямую)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ─── Константы и хранилище ──────────────────────
@@ -31,18 +30,14 @@ def is_pro_user(session_id):
 
 # ─── Защита: js_token + honeypot + referer + UA ─
 @app.before_request
-def log_origin():
-    print("Incoming Origin:", request.headers.get("Origin"))
 def validate_request():
     if request.path not in ["/ask", "/analyze-image"] or request.method != "POST":
         return
 
-    # Защита по Referer
     referer = request.headers.get("Referer", "")
     if not referer.startswith(ALLOWED_REFERER):
         return jsonify({"error": "Invalid referer"}), 403
 
-    # Блокировка подозрительных User-Agent
     ua = request.headers.get("User-Agent", "").lower()
     bad_signatures = ["curl", "python", "aiohttp", "wget", "httpclient", "go-http", "scrapy", "headless"]
     if any(sig in ua for sig in bad_signatures):
@@ -64,8 +59,7 @@ def validate_request():
 
 # ─── Основной маршрут /ask ──────────────────────
 @app.route("/ask", methods=["POST", "OPTIONS"])
-@cross_origin(origins="*", supports_credentials=True)
-#@cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
+@cross_origin(origins=["https://lazy-gpt.webflow.io"], supports_credentials=True)
 @limiter.limit(lambda: "30 per minute" if is_pro_user(get_session_id()) else "5 per minute")
 def ask():
     session_id = get_session_id()
@@ -84,13 +78,13 @@ def ask():
                     "session_id": session_id
                 }), 403
 
-        data["pro"] = is_pro  # <--- обязательно!
+        data["pro"] = is_pro
         return handle_request(data)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ─── Chat handler logic ─────────────────────────
+# ─── Chat handler logic (адаптация под Travel) ──
 def handle_request(data):
     user_input = data.get("message") or ""
     language = data.get("lang", "en")
@@ -99,10 +93,13 @@ def handle_request(data):
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
 
+    # --- Главный PROMPT для TravelBuddy ---
     system_prompt = (
-        "You are HomeBuddy — a friendly, minimal AI assistant for home tasks. "
-        "Answer simply, clearly and in helpful tone. Avoid questions. No explanations. "
-        "Just deliver a final result that’s practical and easy to understand for a homemaker."
+        "You are TravelBuddy — a friendly, minimal AI assistant for travelers. "
+        "Your main goal is to quickly and clearly suggest optimal travel itineraries, budget options, and travel advice. "
+        "Focus only on useful, ready-to-use travel info — practical, personalized, no unnecessary explanations. "
+        "Support Russian and English. If the user writes in Russian, answer in Russian. "
+        "Respond in a warm, concise tone. No questions in return. No generic phrases."
     )
 
     try:
@@ -115,13 +112,15 @@ def handle_request(data):
         )
         answer = response.choices[0].message.content
 
+        # --- Follow-up prompt, ориентирован под travel ---
         followup_prompt = (
-            f"You are HomeBuddy assistant. Based on the answer below, suggest 3 practical follow-up actions "
-            f"that a homemaker might ask next.\n"
+            f"You are TravelBuddy assistant. Based on the answer below, suggest 3 practical follow-up actions "
+            f"that a traveler might want next.\n"
             f"Language: {language.upper()}\n"
-            f"Respond with JSON only, format:\n"
+            f"Respond ONLY with JSON, in the format:\n"
             f"[{{\"label\": \"...\", \"action\": \"...\"}}]\n"
-            f"No links, no explanation, no repetition of the answer. Keep it useful and short."
+            f"Prioritize actions like: 'Find budget accommodation', 'Suggest economical route', 'Show local tours', etc.\n"
+            f"No explanations, no links, no repetition of the previous answer. Keep it travel-specific, short and actionable."
         )
 
         followup_response = client.chat.completions.create(
@@ -176,7 +175,7 @@ def stats():
 # ─── Заглушка ───────────────────────────────────
 @app.route("/")
 def index():
-    return jsonify({"status": "HomeBuddy is running clean."})
+    return jsonify({"status": "TravelBuddy is running clean."})
 
 # ─── Запуск ─────────────────────────────────────
 if __name__ == "__main__":
